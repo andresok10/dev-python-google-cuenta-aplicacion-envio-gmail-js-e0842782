@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <title>Estado de envío de correos</title>
+
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: "Segoe UI", Arial, sans-serif;
+                background: #f3f4f6;
+                padding: 20px;
+                margin: 0;
+                color: #222;
+            }
+
+            h1 {
+                margin: 0 0 20px;
+            }
+
+            .main-container {
+                display: flex;
+                width: 100%;
+                gap: 20px;
+                align-items: flex-start;
+            }
+
+            .left-panel {
+                width: 40%;
+                background: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            }
+
+            .subject-title {
+                margin: 0 0 5px;
+            }
+
+            .subject {
+                margin-top: 0;
+                color: #3b82f6;
+                overflow-wrap: anywhere;
+            }
+
+            button {
+                background: #3b82f6;
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 14px;
+            }
+
+            button:hover {
+                background: #2563eb;
+            }
+
+            button:disabled {
+                background: #9ca3af;
+                cursor: not-allowed;
+            }
+
+            .global-state {
+                margin-top: 15px;
+                font-size: 15px;
+                font-weight: 500;
+            }
+
+            .state-sending {
+                color: #3b82f6;
+            }
+
+            .state-finished {
+                color: #059669;
+            }
+
+            .state-error {
+                color: #dc2626;
+            }
+
+            .state-waiting {
+                color: #6b7280;
+            }
+
+            .summary {
+                margin-top: 20px;
+            }
+
+            .summary h5 {
+                margin-bottom: 10px;
+                font-size: 15px;
+            }
+
+            .progress-container {
+                width: 100%;
+                margin: 10px 0 15px;
+            }
+
+            .progress {
+                width: 100%;
+                height: 18px;
+                display: block;
+            }
+
+            .progress-text {
+                font-size: 13px;
+                font-weight: bold;
+                margin-bottom: 10px;
+            }
+
+            .summary-line {
+                display: block;
+                margin: 4px 0;
+                font-size: 14px;
+            }
+
+            .general-error,
+            .flash {
+                margin-top: 15px;
+                padding: 10px;
+                border-radius: 5px;
+                font-size: 13px;
+                overflow-wrap: anywhere;
+            }
+
+            .general-error,
+            .flash-danger {
+                background: #fee2e2;
+                color: #991b1b;
+            }
+
+            .flash-info {
+                background: #dbeafe;
+                color: #1e40af;
+            }
+
+            .flash-warning {
+                background: #fef3c7;
+                color: #92400e;
+            }
+
+            [hidden] {
+                display: none !important;
+            }
+
+            .documents-title {
+                margin-top: 25px;
+            }
+
+            .pdf-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .pdf-thumb {
+                width: 140px;
+                text-align: center;
+                text-decoration: none;
+                color: inherit;
+                display: block;
+                transition: transform 0.15s;
+            }
+
+            .pdf-thumb:hover {
+                transform: translateY(-3px);
+            }
+
+            .pdf-wrapper {
+                width: 140px;
+                height: 180px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #fff;
+                position: relative;
+            }
+
+            .pdf-wrapper iframe {
+                width: 560px;
+                height: 720px;
+                border: none;
+                pointer-events: none;
+                transform: scale(0.25);
+                transform-origin: 0 0;
+            }
+
+            .file-placeholder {
+                display: flex;
+                height: 100%;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                color: #6b7280;
+            }
+
+            .pdf-name {
+                font-size: 11px;
+                margin-top: 5px;
+                color: #555;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-weight: 500;
+            }
+
+            .ok {
+                display: flex;
+                flex-wrap: wrap;
+                flex: 1;
+                min-width: 0;
+                justify-content: space-evenly;
+                margin: 0;
+                font-size: 15px;
+                gap: 10px;
+                max-height: 80vh;
+                overflow-y: auto;
+                padding: 10px;
+            }
+
+            .ok2 {
+                display: flex;
+                width: 400px;
+                max-width: 100%;
+                min-height: 32px;
+                align-items: center;
+                background: #fff;
+                padding: 6px 8px;
+                border-radius: 5px;
+            }
+
+            .ok3 {
+                margin: 0;
+                flex: 1;
+                min-width: 0;
+                overflow-wrap: anywhere;
+            }
+
+            .spanx {
+                color: #888;
+                font-size: 10px;
+                margin-right: 10px;
+                min-width: 30px;
+            }
+
+            .status {
+                font-size: 13px;
+                font-weight: bold;
+                white-space: nowrap;
+                min-width: 100px;
+                text-align: right;
+                margin-left: 10px;
+            }
+
+            .status.pending {
+                color: #6b7280;
+            }
+
+            .status.success {
+                color: #059669;
+            }
+
+            .status.failure {
+                color: #dc2626;
+            }
+
+            @media (max-width: 1000px) {
+                .main-container {
+                    flex-direction: column;
+                }
+
+                .left-panel,
+                .ok,
+                .ok2 {
+                    width: 100%;
+                }
+
+                .ok {
+                    max-height: none;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1>🚀 Panel de Envío Masivo</h1>
+
+        <div class="main-container">
+            <div class="left-panel">
+                <h3 class="subject-title">Asunto:</h3>
+                <h3 class="subject">{{ asuntox }}</h3>
+
+                <div id="flash-messages" aria-live="polite">
+                    {% for categoria, mensaje in get_flashed_messages(with_categories=true) %}
+                    <div class="flash flash-{{ categoria }}" data-category="{{ categoria }}">{{ mensaje }}</div>
+                    {% endfor %}
+                </div>
+
+                <form id="send-form" method="post" action="{{ url_for('send_email') }}">
+                    <button id="send-button" type="submit" disabled>Conectando...</button>
+                </form>
+
+                <p class="global-state" aria-live="polite">
+                    <b>Estado:</b>
+                    <span id="global-state" class="state-waiting"> Conectando con el servidor... </span>
+                </p>
+
+                <div class="summary">
+                    <h5>Resumen de Envío:</h5>
+
+                    <div class="progress-container">
+                        <progress
+                            id="progress-bar"
+                            class="progress"
+                            value="0"
+                            max="100"
+                            aria-label="Progreso del envío"></progress>
+                    </div>
+
+                    <div class="progress-text">Progreso: <span id="progress-text">0</span>%</div>
+
+                    <span class="summary-line">
+                        <b>Total:</b>
+                        <span id="total-count">{{ emails | length }}</span>
+                    </span>
+
+                    <span class="summary-line">
+                        <b>Procesados:</b>
+                        <span id="processed-count">0</span>
+                    </span>
+
+                    <span class="summary-line">
+                        <b>Enviados:</b>
+                        <span id="sent-count">0</span>
+                    </span>
+
+                    <span class="summary-line">
+                        <b>No confirmados:</b>
+                        <span id="failed-count">0</span>
+                    </span>
+
+                    <span class="summary-line">
+                        <b>Pendientes:</b>
+                        <span id="pending-count">{{ emails | length }}</span>
+                    </span>
+                </div>
+
+                <div id="general-error" class="general-error" role="alert" hidden></div>
+
+                <h3 class="documents-title">Documentos Adjuntos (Contenido)</h3>
+
+                <div class="pdf-grid">
+                    {% for f in files %} {% set archivo_url = url_for('uploads', filename=f['filename']) %}
+
+                    <a
+                        class="pdf-thumb"
+                        href="{{ archivo_url }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="{{ f['filename'] }}">
+                        <div class="pdf-wrapper">
+                            {% if f['filename'].lower().endswith('.pdf') %}
+                            <iframe
+                                src="{{ archivo_url }}#toolbar=0&navpanes=0&view=FitH"
+                                title="Vista previa de {{ f['filename'] }}"
+                                loading="lazy"
+                                tabindex="-1"></iframe>
+                            {% else %}
+                            <div class="file-placeholder">📄 Archivo</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="pdf-name">{{ f['filename'] }}</div>
+                    </a>
+                    {% else %}
+                    <p>No hay archivos adjuntos disponibles.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="ok">
+                {% for email in emails %}
+                <div class="ok2" data-email="{{ email | trim | lower }}">
+                    <span class="spanx">#{{ loop.index }}</span>
+                    <p class="ok3">{{ email }}</p>
+
+                    <span class="status pending"> ⏳ pendiente </span>
+                </div>
+                {% else %}
+                <p>No hay destinatarios configurados.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
+        <script>
+            const form = document.getElementById("send-form");
+            const button = document.getElementById("send-button");
+            const state = document.getElementById("global-state");
+            const errorBox = document.getElementById("general-error");
+            const flashes = document.getElementById("flash-messages");
+
+            const progressBar = document.getElementById("progress-bar");
+            const progressText = document.getElementById("progress-text");
+            const totalCount = document.getElementById("total-count");
+            const processedCount = document.getElementById("processed-count");
+            const sentCount = document.getElementById("sent-count");
+            const failedCount = document.getElementById("failed-count");
+            const pendingCount = document.getElementById("pending-count");
+
+            let socket = null;
+            let sending = false;
+            let submitting = false;
+            let currentJob = null;
+
+            function updateButton() {
+                button.disabled = !socket?.connected || sending || submitting;
+
+                if (sending) {
+                    button.textContent = "Envío en proceso...";
+                } else if (submitting) {
+                    button.textContent = "Iniciando...";
+                } else if (!socket?.connected) {
+                    button.textContent = "Sin conexión";
+                } else {
+                    button.textContent = "Iniciar ciclo de envío";
+                }
+            }
+
+            function setState(text, className) {
+                state.textContent = text;
+                state.className = className;
+            }
+
+            function showError(message) {
+                errorBox.textContent = message || "";
+                errorBox.hidden = !message;
+            }
+
+            function setProgress(value) {
+                const numericValue = Number(value);
+                const percentage = Number.isFinite(numericValue) ? Math.max(0, Math.min(100, numericValue)) : 0;
+
+                progressBar.value = percentage;
+                progressText.textContent = String(percentage);
+            }
+
+            function resetRows() {
+                document.querySelectorAll(".ok2 .status").forEach((element) => {
+                    element.className = "status pending";
+                    element.textContent = "⏳ pendiente";
+                });
+            }
+
+            function updateRecipient(recipient, status) {
+                const normalized = String(recipient).trim().toLowerCase();
+
+                document.querySelectorAll(".ok2[data-email]").forEach((row) => {
+                    if (row.dataset.email !== normalized) {
+                        return;
+                    }
+
+                    const element = row.querySelector(".status");
+                    const success = status === "success";
+
+                    element.className = success ? "status success" : "status failure";
+
+                    element.textContent = success ? "✅ enviado" : "⚠️ no confirmado";
+                });
+            }
+
+            function updateCounts(total, sent, failed, processed) {
+                totalCount.textContent = total;
+                sentCount.textContent = sent;
+                failedCount.textContent = failed;
+                processedCount.textContent = processed;
+                pendingCount.textContent = Math.max(0, total - processed);
+            }
+
+            if (typeof io === "undefined") {
+                setState("No se pudo cargar Socket.IO.", "state-error");
+
+                showError("Comprueba tu conexión a Internet y recarga la página.");
+            } else {
+                socket = io();
+
+                socket.on("connect", () => {
+                    if (!sending && !submitting) {
+                        setState("Conectado. En espera.", "state-waiting");
+                    }
+
+                    updateButton();
+                });
+
+                socket.on("disconnect", () => {
+                    setState("Conexión perdida. El envío puede continuar en el servidor.", "state-error");
+
+                    updateButton();
+                });
+
+                socket.on("connect_error", () => {
+                    setState("No se pudo conectar con el servidor.", "state-error");
+
+                    updateButton();
+                });
+
+                socket.on("process_status", (data) => {
+                    if (data.status === "started") {
+                        currentJob = data.job_id;
+                        sending = true;
+
+                        showError("");
+                        resetRows();
+                        setProgress(0);
+                        updateCounts(Number(data.total) || 0, 0, 0, 0);
+
+                        setState("🚀 Enviando...", "state-sending");
+                        updateButton();
+                        return;
+                    }
+
+                    if (currentJob && data.job_id !== currentJob) {
+                        return;
+                    }
+
+                    if (data.status !== "finished" && data.status !== "error") {
+                        return;
+                    }
+
+                    sending = false;
+
+                    const total = Number(data.total) || 0;
+                    const sent = Number(data.sent) || 0;
+                    const failed = Number(data.failed) || 0;
+                    const processed = sent + failed;
+
+                    updateCounts(total, sent, failed, processed);
+                    setProgress(total ? (processed * 100) / total : 0);
+
+                    if (data.status === "error") {
+                        setState("⚠️ Envío interrumpido", "state-error");
+                        showError(data.error || "Ocurrió un error general.");
+                    } else if (failed > 0) {
+                        setState("⚠️ Finalizado con envíos no confirmados", "state-error");
+                    } else {
+                        setState("✅ Finalizado", "state-finished");
+                    }
+
+                    updateButton();
+                });
+
+                socket.on("progress_update", (data) => {
+                    if (currentJob && data.job_id !== currentJob) {
+                        return;
+                    }
+
+                    currentJob = data.job_id;
+                    sending = true;
+
+                    updateCounts(
+                        Number(data.total) || 0,
+                        Number(data.sent) || 0,
+                        Number(data.failed) || 0,
+                        Number(data.current) || 0,
+                    );
+
+                    setProgress(data.progress);
+                    updateRecipient(data.recipient, data.status);
+                    setState("🚀 Enviando...", "state-sending");
+                    updateButton();
+                });
+            }
+
+            // Envía el formulario sin abandonar la página.
+            // Así se conservan la conexión y los eventos de progreso.
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+
+                if (!socket?.connected || sending || submitting) {
+                    return;
+                }
+
+                submitting = true;
+                flashes.replaceChildren();
+                showError("");
+                updateButton();
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: "POST",
+                        body: new FormData(form),
+                        credentials: "same-origin",
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`El servidor respondió con el estado ${response.status}.`);
+                    }
+
+                    // La ruta Python redirige a index y allí entrega los flash.
+                    const html = await response.text();
+                    const documentResult = new DOMParser().parseFromString(html, "text/html");
+
+                    const messages = documentResult.querySelectorAll("#flash-messages .flash");
+
+                    messages.forEach((message) => {
+                        flashes.appendChild(document.importNode(message, true));
+                    });
+                } catch (error) {
+                    showError(
+                        `${error.message} No se pudo confirmar el inicio; ` +
+                            "comprueba el servidor antes de volver a enviar.",
+                    );
+
+                    if (!sending) {
+                        setState("Inicio no confirmado", "state-error");
+                    }
+                } finally {
+                    submitting = false;
+                    updateButton();
+                }
+            });
+        </script>
+    </body>
+</html>

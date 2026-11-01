@@ -1,0 +1,27 @@
+
+# Exclusiones adicionales del publicador
+.dart_tool/
+.expo/
+.git/
+.gradle/
+.mypy_cache/
+.next/
+.nuxt/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+build/
+coverage/
+node_modules/
+obj/
+vendor/
+venv/
+*.aab
+*.apk
+*.class
+*.dex
+*.dill
+*.log
+*.pyc
+*.pyo
